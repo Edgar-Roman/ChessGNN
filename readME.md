@@ -7,8 +7,8 @@ Chess, a two-player strategy board game that offers a myriad of complex strategi
 - **Name**: ChessDB - A database of 3.5 Million Chess Games.
 - **Description**: This dataset encompasses 3.5 million chess games, capturing a vast array of strategies, player decisions, and game outcomes. It offers in-depth annotations and metadata for each game.
 - **Task**: Given a specific board state, predict the likelihood of a win for white. This task allows us to comprehend key strategies and their effectiveness.
-- **Metric**: We will employ accuracy for our primary metric, alongside the AUC-ROC to gauge the model's ability to distinguish between winning, drawing, and losing positions.
-
+- **Metric**: [Look at metrics section below]
+  
 **Why this dataset?**
 Chess games provide a rich tapestry of strategic depth and decision-making. The vastness of the ChessDB dataset ensures we capture a comprehensive set of patterns and strategies from varied game scenarios.
 
