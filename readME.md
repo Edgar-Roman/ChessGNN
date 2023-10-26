@@ -6,7 +6,9 @@ Chess, a two-player strategy board game that offers a myriad of complex strategi
 **Dataset**: 
 - **Name**: ChessDB - A database of 3.5 Million Chess Games.
 - **Description**: This dataset encompasses 3.5 million chess games, capturing a vast array of strategies, player decisions, and game outcomes. It offers in-depth annotations and metadata for each game.
-- **Task**: Given a specific board state, predict the likelihood of a win for white. This task allows us to comprehend key strategies and their effectiveness.
+- **Task Objective:** The primary goal of our project is to build a model that can autonomously play chess. Leveraging the power of graph neural networks, specifically GATs, the model will assess various chess board states and assign weights to potential moves, indicative of their strategic advantage. Instead of merely determining the best move in any given situation, the model will analyze a spectrum of possible moves, quantifying the potential utility of each. These weightings, beyond guiding the model's decision-making in-game, also offer insights into deeply embedded game strategies. By training on a vast array of historical games, the model is equipped not just to reproduce strategies of past masters, but to innovate, adapting to unseen board configurations and potentially devising novel strategies of its own. Through this approach, we aim to build a chess-playing model that is both historically informed and future-ready.
+
+---
 - **Metric**: [Look at metrics section below]
   
 **Why this dataset?**
