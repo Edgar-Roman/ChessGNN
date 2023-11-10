@@ -71,6 +71,6 @@ G = to_networkx(data, to_undirected=True)
 
 # Draw the graph using NetworkX
 plt.figure(figsize=(12, 8))
-nx.draw(G, with_labels=True, node_color='lightblue', node_size=500, edge_color='gray')
+nx.draw(G, with_labels=False, node_color='lightblue', node_size=25, edge_color='gray')
 plt.title('Graph Representation of Chess Games')
 plt.show()
