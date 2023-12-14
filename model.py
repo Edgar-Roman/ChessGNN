@@ -23,13 +23,25 @@ class GATChessModel(torch.nn.Module):
         return x
 
 def load_data_from_pickle(file_path):
+    games_fen = pickle.load(open('data/subset_games_fen.pkl', 'rb'))
+    fen_to_index = {}
+
+    edge_indices = []
+    for game_fens in games_fen:
+        for i in range(len(game_fens) - 1):
+            source = fen_to_index[game_fens[i]]
+            target = fen_to_index[game_fens[i + 1]]
+            edge_indices.append((source, target))
+
+    # Convert edge indices to a tensor
+    edge_index_tensor = torch.tensor(edge_indices, dtype=torch.long).t().contiguous()
+
     with open(file_path, 'rb') as file:
         data = pickle.load(file)
     x = torch.tensor(data['x'], dtype=torch.float)
     y = torch.tensor(data['y'], dtype=torch.float)
-    # Assuming you have edge_index information. If not, you will need to create it.
-    edge_index = torch.tensor(...) # replace with actual edge_index
-    return Data(x=x, edge_index=edge_index, y=y)
+   
+    return Data(x=x, edge_index=edge_index_tensor, y=y)
 
 
 if __name__ == '__main__':
