@@ -2,7 +2,10 @@ import chess
 import pickle
 import warnings
 
-from extract_features import extract_features 
+from extract_features import extract_features
+import requests
+
+from tqdm import tqdm
 
 
 def convert_moves_to_san(moves_str):
@@ -59,12 +62,11 @@ def games_to_fen(games_moves):
     return all_games_fen
 
 
-def create_feature_vector(fen, score):
+def create_feature_vector(fen):
     features = extract_features(fen)
     features_vector = [features["material_balance"], features["pawn_structure"], 
                        features["mobility"], features["king_safety"], 
-                       features["center_control"], features["piece_development"],
-                       score]
+                       features["center_control"], features["piece_development"]]
     
     return features_vector
 
@@ -74,21 +76,21 @@ if __name__ == '__main__':
     chess_games_moves = preprocess_chess_data(file_path)
     subset_games_fen = games_to_fen(chess_games_moves)
 
-    single_game_fen = subset_games_fen[0]
-
-    import requests
-
     DEPTH = 5
     MODE = 'eval'
 
-    for fen in single_game_fen:
-        response = requests.get('https://stockfish.online/api/stockfish.php?fen={}&depth={}&mode={}'.format(fen, DEPTH, MODE))
-        evaluation = response.json().get('data').split()[2]
-        print(evaluation)
+    all_games = []
+    all_labels = []
 
-        features_vector = create_feature_vector(fen, evaluation)
+    for game in tqdm(subset_games_fen):
+        x = [create_feature_vector(fen) for fen in game]
+        labels = [requests.get('https://stockfish.online/api/stockfish.php?fen={}&depth={}&mode={}'.format(fen, DEPTH, MODE)).json().get('data').split()[2] for fen in game]
 
-        # print(extract_features(fen))
+        all_games.append(x)
+        all_labels.append(labels)
+
+
+    pickle.dump(all_games, open('data/subset_games_test.pkl', 'wb'))
 
 
     # pickle.dump(subset_games_fen, open('data/subset_games_fen.pkl', 'wb'))
