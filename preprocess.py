@@ -1,6 +1,7 @@
 import chess
 import pickle
 import warnings
+import concurrent.futures
 
 from extract_features import extract_features
 import requests
@@ -71,6 +72,24 @@ def create_feature_vector(fen):
     return features_vector
 
 
+def fetch_label(fen):
+    """
+    Fetch the label for a given FEN from the API.
+    """
+    try:
+        # Set a timeout for the request (e.g., 5 seconds)
+        response = requests.get(f'https://stockfish.online/api/stockfish.php?fen={fen}&depth={DEPTH}&mode={MODE}', timeout=3)
+        if response.status_code == 200:
+            print("RESPONSEEEE", response.json())
+            return response.json().get('data').split()[2]
+        else:
+            print(f"Error fetching data for FEN: {fen}. Status Code: {response.status_code}")
+            return None
+    except requests.RequestException as e:
+        print(f"Request failed for FEN: {fen}. Error: {e}")
+        return None
+    
+
 if __name__ == '__main__':
     file_path = 'data/subset.txt'
     chess_games_moves = preprocess_chess_data(file_path)
@@ -82,15 +101,17 @@ if __name__ == '__main__':
     all_games = []
     all_labels = []
 
-    for game in tqdm(subset_games_fen):
-        x = [create_feature_vector(fen) for fen in game]
-        labels = [requests.get('https://stockfish.online/api/stockfish.php?fen={}&depth={}&mode={}'.format(fen, DEPTH, MODE)).json().get('data').split()[2] for fen in game]
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        for game in tqdm(subset_games_fen):
+            x = [create_feature_vector(fen) for fen in game]
+            
+            future_to_label = {executor.submit(fetch_label, fen): fen for fen in game}
+            labels = []
+            for future in concurrent.futures.as_completed(future_to_label):
+                labels.append(future.result())
 
-        all_games.append(x)
-        all_labels.append(labels)
+            all_games.append(x)
+            all_labels.append(labels)
 
     data = {'x': all_games, 'y': all_labels}
     pickle.dump(data, open('data/subset_games_test.pkl', 'wb'))
-
-
-    # pickle.dump(subset_games_fen, open('data/subset_games_fen.pkl', 'wb'))
