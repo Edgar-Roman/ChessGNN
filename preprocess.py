@@ -1,5 +1,9 @@
 import chess
 import pickle
+import warnings
+
+from extract_features import extract_features 
+
 
 def convert_moves_to_san(moves_str):
     # Split the string into individual moves, ignoring the white and black move indicators
@@ -58,4 +62,22 @@ if __name__ == '__main__':
     file_path = 'data/subset.txt'
     chess_games_moves = preprocess_chess_data(file_path)
     subset_games_fen = games_to_fen(chess_games_moves)
-    pickle.dump(subset_games_fen, open('data/subset_games_fen.pkl', 'wb'))
+
+    single_game_fen = subset_games_fen[0]
+
+    import requests
+
+    DEPTH = 5
+    MODE = 'eval'
+
+    for fen in single_game_fen:
+        response = requests.get('https://stockfish.online/api/stockfish.php?fen={}&depth={}&mode={}'.format(fen, DEPTH, MODE))
+        evaluation = response.json().get('data').split()[2]
+        print(evaluation)
+
+        print(extract_features(fen))
+
+
+
+
+    # pickle.dump(subset_games_fen, open('data/subset_games_fen.pkl', 'wb'))
