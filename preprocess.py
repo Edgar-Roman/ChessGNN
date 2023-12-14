@@ -79,18 +79,16 @@ def fetch_label(fen):
     try:
         response = requests.get(f'https://stockfish.online/api/stockfish.php?fen={fen}&depth={DEPTH}&mode={MODE}')
         if response.status_code == 200:
-            print("RESPONSEEEE", response.json())
-            return response.json().get('data').split()[2]
+            return response.json().get('data').split()[2], False
         else:
             print(f"Error fetching data for FEN: {fen}. Status Code: {response.status_code}")
-            return None
+            return None, True
     except requests.RequestException as e:
         print(f"Request failed for FEN: {fen}. Error: {e}")
-        return None
+        return None, True
     
 
-if __name__ == '__main__':
-    file_path = 'data/subset.txt'
+def process_chess_data(file_path):
     chess_games_moves = preprocess_chess_data(file_path)
     subset_games_fen = games_to_fen(chess_games_moves)
 
@@ -99,14 +97,25 @@ if __name__ == '__main__':
 
     all_games = []
     all_labels = []
+    exception_indices = []
 
     for game in tqdm(subset_games_fen):
-        for fen in game:
+        for i, fen in enumerate(game):
             x = [create_feature_vector(fen) for fen in game]
-            labels = fetch_label(fen)
+            labels, exception_occurred = fetch_label(fen)
 
             all_games.append(x)
             all_labels.append(labels)
 
+            if exception_occurred:
+                exception_indices.append(i)
+
     data = {'x': all_games, 'y': all_labels}
+    
+    return data, exception_indices
+
+
+if __name__ == '__main__':
+    file_path = 'data/subset.txt'
+    data, exception_indices = process_chess_data(file_path)
     pickle.dump(data, open('data/subset_games_test.pkl', 'wb'))

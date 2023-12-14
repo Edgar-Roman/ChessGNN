@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from torch_geometric.nn import GATConv
 
 from graph import create_data
+from preprocess import process_chess_data
 
 class GATChessModel(torch.nn.Module):
     def __init__(self, num_features, heads=8, dropout=0.6):
@@ -22,32 +23,46 @@ class GATChessModel(torch.nn.Module):
 
         return x
 
-def load_data_from_pickle(file_path):
-    games_fen = pickle.load(open('data/subset_games_fen.pkl', 'rb'))
-    fen_to_index = {}
 
-    edge_indices = []
-    for game_fens in games_fen:
-        for i in range(len(game_fens) - 1):
-            source = fen_to_index[game_fens[i]]
-            target = fen_to_index[game_fens[i + 1]]
-            edge_indices.append((source, target))
+def get_edge_indices():
+    file_path = 'data/subset.txt'
+    _, exception_indices = process_chess_data(file_path)
 
-    # Convert edge indices to a tensor
-    edge_index_tensor = torch.tensor(edge_indices, dtype=torch.long).t().contiguous()
+    with open('data/subset_games_fen.pkl', 'rb') as f:
+        node_id = 0
+        fen_to_node = {}
 
-    with open(file_path, 'rb') as file:
-        data = pickle.load(file)
-    x = torch.tensor(data['x'], dtype=torch.float)
-    y = torch.tensor(data['y'], dtype=torch.float)
-   
-    return Data(x=x, edge_index=edge_index_tensor, y=y)
+        games = pickle.load(f)
+        for i, game in enumerate(games):
+            if i in exception_indices:  # skip games with exceptions
+                continue
+            for state in game:
+                if state not in fen_to_node:
+                    fen_to_node[state] = node_id
+                    node_id += 1
 
+        src, target = [], []
+        for game in games:
+            for i in range(len(game) - 1):
+                src.append(fen_to_node[game[i]])
+                target.append(fen_to_node[game[i+1]])
+        
+        edge_index = torch.tensor([src, target], dtype=torch.long)
+
+        return edge_index
+
+
+def get_data():
+    with open('data/subset_games_test.pkl', 'rb') as f:
+        data = pickle.load(f)
+        flattened_list = [lst for sublist in data['x'] for lst in sublist]
+        y = torch.tensor(data['y'], dtype=torch.float)
+        edge_index = get_edge_indices()
+        
+        return Data(x=flattened_list, edge_index=edge_index, y=y)
+    
 
 if __name__ == '__main__':
-    data = load_data_from_pickle('data/subset_games_test.pkl')
-
-    # Hyperparameters
     num_features = 12 * 64
     learning_rate = 0.01
     num_epochs = 100
@@ -55,12 +70,14 @@ if __name__ == '__main__':
     model = GATChessModel(num_features)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     loss_func = torch.nn.MSELoss()  # Mean Squared Error for regression
+    
+    data = get_data()
 
-    # Training loop
+
     model.train()
     for epoch in range(num_epochs):
         optimizer.zero_grad()
-        out = model(data)
+        out = model(data.x)
         loss = loss_func(out, data.y)
         loss.backward()
         optimizer.step()
