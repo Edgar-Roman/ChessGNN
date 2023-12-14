@@ -89,8 +89,8 @@ if __name__ == '__main__':
         all_games.append(x)
         all_labels.append(labels)
 
-
-    pickle.dump(all_games, open('data/subset_games_test.pkl', 'wb'))
+    data = {'x': all_games, 'y': all_labels}
+    pickle.dump(data, open('data/subset_games_test.pkl', 'wb'))
 
 
     # pickle.dump(subset_games_fen, open('data/subset_games_fen.pkl', 'wb'))
