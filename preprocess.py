@@ -58,6 +58,17 @@ def games_to_fen(games_moves):
         all_games_fen.append(game_fen)
     return all_games_fen
 
+
+def create_feature_vector(fen, score):
+    features = extract_features(fen)
+    features_vector = [features["material_balance"], features["pawn_structure"], 
+                       features["mobility"], features["king_safety"], 
+                       features["center_control"], features["piece_development"],
+                       score]
+    
+    return features_vector
+
+
 if __name__ == '__main__':
     file_path = 'data/subset.txt'
     chess_games_moves = preprocess_chess_data(file_path)
@@ -75,9 +86,9 @@ if __name__ == '__main__':
         evaluation = response.json().get('data').split()[2]
         print(evaluation)
 
-        print(extract_features(fen))
+        features_vector = create_feature_vector(fen, evaluation)
 
-
+        # print(extract_features(fen))
 
 
     # pickle.dump(subset_games_fen, open('data/subset_games_fen.pkl', 'wb'))
