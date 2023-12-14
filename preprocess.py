@@ -8,6 +8,8 @@ import requests
 
 from tqdm import tqdm
 
+DEPTH = 5
+MODE = 'eval'
 
 def convert_moves_to_san(moves_str):
     # Split the string into individual moves, ignoring the white and black move indicators
@@ -92,26 +94,25 @@ def process_chess_data(file_path):
     chess_games_moves = preprocess_chess_data(file_path)
     subset_games_fen = games_to_fen(chess_games_moves)
 
-    DEPTH = 5
-    MODE = 'eval'
-
-    all_games = []
+    # all_games = []
     all_labels = []
     exception_indices = []
 
     for game in tqdm(subset_games_fen):
         for i, fen in enumerate(game):
-            x = [create_feature_vector(fen) for fen in game]
+    #         x = [create_feature_vector(fen) for fen in game]
             labels, exception_occurred = fetch_label(fen)
 
-            all_games.append(x)
+    #         all_games.append(x)
             all_labels.append(labels)
 
             if exception_occurred:
                 exception_indices.append(i)
 
-    data = {'x': all_games, 'y': all_labels}
-    
+    # data = {'x': all_games, 'y': all_labels}
+
+    data = {'fen': subset_games_fen, 'y': all_labels}
+
     return data, exception_indices
 
 
