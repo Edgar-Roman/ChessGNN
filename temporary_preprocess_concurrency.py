@@ -225,4 +225,4 @@ if __name__ == '__main__':
     x, y = zip(*all_games_labels)
 
     data = {'x': x, 'y': y}
-    pickle.dump(data, open('/content/drive/MyDrive/cs224w-project/chess_db.zip/subset_games_test_updated.pkl', 'wb'))
+    pickle.dump(data, open('/content/drive/MyDrive/cs224w-project/subset_games_test_updated.pkl', 'wb'))
