@@ -77,8 +77,7 @@ def fetch_label(fen):
     Fetch the label for a given FEN from the API.
     """
     try:
-        # Set a timeout for the request (e.g., 5 seconds)
-        response = requests.get(f'https://stockfish.online/api/stockfish.php?fen={fen}&depth={DEPTH}&mode={MODE}', timeout=3)
+        response = requests.get(f'https://stockfish.online/api/stockfish.php?fen={fen}&depth={DEPTH}&mode={MODE}')
         if response.status_code == 200:
             print("RESPONSEEEE", response.json())
             return response.json().get('data').split()[2]
@@ -101,14 +100,10 @@ if __name__ == '__main__':
     all_games = []
     all_labels = []
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-        for game in tqdm(subset_games_fen):
+    for game in tqdm(subset_games_fen):
+        for fen in game:
             x = [create_feature_vector(fen) for fen in game]
-            
-            future_to_label = {executor.submit(fetch_label, fen): fen for fen in game}
-            labels = []
-            for future in concurrent.futures.as_completed(future_to_label):
-                labels.append(future.result())
+            labels = fetch_label(fen)
 
             all_games.append(x)
             all_labels.append(labels)
