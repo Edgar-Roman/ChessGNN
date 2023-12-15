@@ -76,14 +76,7 @@ def get_data():
         # print(extract_features(data['fen'][0][0]))
         x = [extract_features(fen) for game in data['fen'] for fen in game]
         x = torch.tensor(torch.stack(x), dtype=torch.float32)
- 
-        y = []
-        for i in data['y']:
-            if type(i) != str:
-                continue
-            else:
-                y.append(float(i))
-        # y = [float(i) for i in data['y']]
+        y = [float(score) for game in data['y'] for score in game]
         edge_index = torch.tensor(get_edge_indices(), dtype=torch.long)
 
         y = torch.tensor(y, dtype=torch.float32)
