@@ -1,4 +1,5 @@
 import chess
+import torch
 
 def calculate_material_balance(board):
     piece_values = {chess.PAWN: 1, chess.KNIGHT: 3, chess.BISHOP: 3, chess.ROOK: 5, chess.QUEEN: 9, chess.KING: 0}
@@ -84,4 +85,9 @@ def extract_features(fen):
         "center_control": control_of_center(board),
         "piece_development": piece_development(board)
     }
-    return features
+
+    features_vector = [features["material_balance"], features["pawn_structure"], 
+                    features["mobility"], features["king_safety"], 
+                    features["center_control"], features["piece_development"]]
+    
+    return torch.tensor(features_vector)

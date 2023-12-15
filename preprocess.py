@@ -65,13 +65,13 @@ def games_to_fen(games_moves):
     return all_games_fen
 
 
-def create_feature_vector(fen):
-    features = extract_features(fen)
-    features_vector = [features["material_balance"], features["pawn_structure"], 
-                       features["mobility"], features["king_safety"], 
-                       features["center_control"], features["piece_development"]]
+# def create_feature_vector(fen):
+#     features = extract_features(fen)
+#     features_vector = [features["material_balance"], features["pawn_structure"], 
+#                        features["mobility"], features["king_safety"], 
+#                        features["center_control"], features["piece_development"]]
     
-    return features_vector
+#     return features_vector
 
 
 def fetch_label(fen):
@@ -81,7 +81,9 @@ def fetch_label(fen):
     try:
         response = requests.get(f'https://stockfish.online/api/stockfish.php?fen={fen}&depth={DEPTH}&mode={MODE}')
         if response.status_code == 200:
-            return response.json().get('data').split()[2], False
+            data = response.json().get('data').split()[2]
+            print(data)
+            return data, False
         else:
             print(f"Error fetching data for FEN: {fen}. Status Code: {response.status_code}")
             return None, True
@@ -93,13 +95,14 @@ def fetch_label(fen):
 def process_chess_data(file_path):
     chess_games_moves = preprocess_chess_data(file_path)
     subset_games_fen = games_to_fen(chess_games_moves)
+    print(len(subset_games_fen))
 
     # all_games = []
     all_labels = []
     exception_indices = []
 
-    for game in tqdm(subset_games_fen):
-        for i, fen in enumerate(game):
+    for i, game in tqdm(subset_games_fen):
+        for fen in enumerate(game):
     #         x = [create_feature_vector(fen) for fen in game]
             labels, exception_occurred = fetch_label(fen)
 
@@ -112,6 +115,10 @@ def process_chess_data(file_path):
     # data = {'x': all_games, 'y': all_labels}
 
     data = {'fen': subset_games_fen, 'y': all_labels}
+
+    with open('data/exception_indices.txt', 'w') as file:
+        for index in exception_indices:
+            file.write(f"{index}\n")
 
     return data, exception_indices
 

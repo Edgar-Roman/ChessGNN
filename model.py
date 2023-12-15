@@ -3,9 +3,13 @@ import torch
 from torch_geometric.data import Data
 import torch.nn.functional as F
 from torch_geometric.nn import GATConv
+import torch_scatter
 
-from graph import create_data
 from preprocess import process_chess_data
+from extract_features import extract_features
+
+import time
+from tqdm import tqdm
 
 class GATChessModel(torch.nn.Module):
     def __init__(self, num_features, heads=8, dropout=0.6):
@@ -26,13 +30,22 @@ class GATChessModel(torch.nn.Module):
 
 def get_edge_indices():
     file_path = 'data/subset.txt'
-    _, exception_indices = process_chess_data(file_path)
+    # _, exception_indices = process_chess_data(file_path)
+    exception_indices = []
 
-    with open('data/subset_games_fen.pkl', 'rb') as f:
+    # Read exception indices from file
+    with open('data/exception_indices.txt', 'r') as file:
+        for line in file:
+            exception_indices.append(int(line.strip()))
+
+    print("exceptions", exception_indices)
+
+    with open('data/subset_games_test.pkl', 'rb') as f:
         node_id = 0
         fen_to_node = {}
 
         games = pickle.load(f)
+        print("NUM GAME", len(games))
         for i, game in enumerate(games):
             if i in exception_indices:  # skip games with exceptions
                 continue
@@ -40,12 +53,17 @@ def get_edge_indices():
                 if state not in fen_to_node:
                     fen_to_node[state] = node_id
                     node_id += 1
+        
+        print("NODE ID", node_id)
 
         src, target = [], []
-        for game in games:
+        for j, game in enumerate(games):
             for i in range(len(game) - 1):
-                src.append(fen_to_node[game[i]])
-                target.append(fen_to_node[game[i+1]])
+                if j in exception_indices:  # skip games with exceptions
+                    continue
+                else:
+                    src.append(fen_to_node[game[i]])
+                    target.append(fen_to_node[game[i+1]])
         
         edge_index = torch.tensor([src, target], dtype=torch.long)
 
@@ -55,15 +73,26 @@ def get_edge_indices():
 def get_data():
     with open('data/subset_games_test.pkl', 'rb') as f:
         data = pickle.load(f)
-        flattened_list = [lst for sublist in data['x'] for lst in sublist]
-        y = torch.tensor(data['y'], dtype=torch.float)
-        edge_index = get_edge_indices()
+        # print(extract_features(data['fen'][0][0]))
+        x = [extract_features(fen) for game in data['fen'] for fen in game]
+        x = torch.tensor(torch.stack(x), dtype=torch.float32)
+ 
+        y = []
+        for i in data['y']:
+            if type(i) != str:
+                continue
+            else:
+                y.append(float(i))
+        # y = [float(i) for i in data['y']]
+        edge_index = torch.tensor(get_edge_indices(), dtype=torch.long)
+
+        y = torch.tensor(y, dtype=torch.float32)
         
-        return Data(x=flattened_list, edge_index=edge_index, y=y)
+        return Data(x=x, edge_index=edge_index, y=y)
     
 
 if __name__ == '__main__':
-    num_features = 12 * 64
+    num_features = 6
     learning_rate = 0.01
     num_epochs = 100
 
@@ -73,13 +102,19 @@ if __name__ == '__main__':
     
     data = get_data()
 
-
     model.train()
-    for epoch in range(num_epochs):
+    for epoch in tqdm(range(num_epochs), desc="Epochs"):
+        start_time = time.time()
+
         optimizer.zero_grad()
-        out = model(data.x)
+        out = model(data)
         loss = loss_func(out, data.y)
         loss.backward()
         optimizer.step()
-        print(f"Epoch {epoch+1}, Loss: {loss.item()}")
+
+        end_time = time.time()
+        epoch_duration = end_time - start_time
+        print(f"Epoch {epoch + 1}/{num_epochs}, Loss: {loss.item():.4f}, Duration: {epoch_duration:.2f} sec")
+
+        # print(f"Epoch {epoch+1}, Loss: {loss.item()}")
 
