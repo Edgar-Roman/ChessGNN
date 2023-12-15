@@ -4,6 +4,7 @@ from torch_geometric.data import Data
 import torch.nn.functional as F
 from torch_geometric.nn import GATConv
 import torch_scatter
+from sklearn.model_selection import KFold
 
 from preprocess import process_chess_data
 from extract_features import extract_features
@@ -40,7 +41,8 @@ def get_edge_indices():
 
     print("exceptions", exception_indices)
 
-    with open('data/subset_games_test.pkl', 'rb') as f:
+    # with open('data/subset_games_test.pkl', 'rb') as f:
+    with open('data/all_games.pkl', 'rb') as f:
         node_id = 0
         fen_to_node = {}
 
@@ -71,7 +73,8 @@ def get_edge_indices():
 
 
 def get_data():
-    with open('data/subset_games_test.pkl', 'rb') as f:
+    # with open('data/subset_games_test.pkl', 'rb') as f:
+    with open('data/all_games.pkl', 'rb') as f:
         data = pickle.load(f)
         # print(extract_features(data['fen'][0][0]))
         x = [extract_features(fen) for game in data['fen'] for fen in game]
@@ -84,30 +87,50 @@ def get_data():
         return Data(x=x, edge_index=edge_index, y=y)
     
 
+def train_model(train_data, val_data, model, optimizer, loss_func, epochs):
+    model.train()
+    for epoch in range(epochs):
+        optimizer.zero_grad()
+        out = model(train_data)
+        loss = loss_func(out, train_data.y)
+        loss.backward()
+        optimizer.step()
+
+        # Validation step (you can add more detailed validation metrics if needed)
+        model.eval()
+        with torch.no_grad():
+            val_out = model(val_data)
+            val_loss = loss_func(val_out, val_data.y)
+        
+        print(f"Epoch {epoch+1}/{epochs}, Train Loss: {loss.item():.4f}, Val Loss: {val_loss.item():.4f}")
+
+    return model
+
+
+def k_fold_cross_validation(data, k=2, epochs=100):
+    kfold = KFold(n_splits=k, shuffle=True)
+
+    for fold, (train_idx, val_idx) in enumerate(kfold.split(data.x)):
+        print(f"Fold {fold + 1}/{k}")
+
+        train_data = Data(x=data.x[train_idx], edge_index=data.edge_index, y=data.y[train_idx])
+        val_data = Data(x=data.x[val_idx], edge_index=data.edge_index, y=data.y[val_idx])
+
+        model = GATChessModel(num_features)
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+        loss_func = torch.nn.MSELoss()
+
+        trained_model = train_model(train_data, val_data, model, optimizer, loss_func, epochs)
+
+        # Save model checkpoint
+        torch.save(trained_model.state_dict(), f'gat_chess_model_fold_{fold + 1}.pt')
+
+
 if __name__ == '__main__':
     num_features = 6
     learning_rate = 0.01
     num_epochs = 100
 
-    model = GATChessModel(num_features)
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    loss_func = torch.nn.MSELoss()  # Mean Squared Error for regression
-    
     data = get_data()
 
-    model.train()
-    for epoch in tqdm(range(num_epochs), desc="Epochs"):
-        start_time = time.time()
-
-        optimizer.zero_grad()
-        out = model(data)
-        loss = loss_func(out, data.y)
-        loss.backward()
-        optimizer.step()
-
-        end_time = time.time()
-        epoch_duration = end_time - start_time
-        print(f"Epoch {epoch + 1}/{num_epochs}, Loss: {loss.item():.4f}, Duration: {epoch_duration:.2f} sec")
-
-        # print(f"Epoch {epoch+1}, Loss: {loss.item()}")
-
+    k_fold_cross_validation(data, k=5, epochs=num_epochs)
